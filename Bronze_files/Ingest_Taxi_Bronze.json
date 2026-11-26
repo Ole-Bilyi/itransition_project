@@ -1,0 +1,193 @@
+{
+    "name": "Ingest_Taxi_Bronze",
+    "objectId": "15382fb6-b556-4bf6-8344-6a5ebb88b88c",
+    "properties": {
+        "activities": [
+            {
+                "name": "ForEachMonth",
+                "type": "ForEach",
+                "dependsOn": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@createArray('01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12')",
+                        "type": "Expression"
+                    },
+                    "isSequential": true,
+                    "activities": [
+                        {
+                            "name": "Get_Parquet",
+                            "type": "Copy",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "typeProperties": {
+                                "source": {
+                                    "type": "BinarySource",
+                                    "storeSettings": {
+                                        "type": "HttpReadSettings",
+                                        "requestMethod": "GET"
+                                    },
+                                    "formatSettings": {
+                                        "type": "BinaryReadSettings"
+                                    },
+                                    "datasetSettings": {
+                                        "annotations": [],
+                                        "type": "Binary",
+                                        "typeProperties": {
+                                            "location": {
+                                                "type": "HttpServerLocation",
+                                                "relativeUrl": {
+                                                    "value": "@concat('/trip-data/yellow_tripdata_2025-', item(), '.parquet')",
+                                                    "type": "Expression"
+                                                }
+                                            }
+                                        },
+                                        "externalReferences": {
+                                            "connection": "4df0d951-3b78-4539-8da2-9c106c9ab17d"
+                                        }
+                                    }
+                                },
+                                "sink": {
+                                    "type": "BinarySink",
+                                    "storeSettings": {
+                                        "type": "AzureBlobStorageWriteSettings"
+                                    },
+                                    "datasetSettings": {
+                                        "annotations": [],
+                                        "linkedService": {
+                                            "name": "Bronze_Lakehouse",
+                                            "properties": {
+                                                "annotations": [],
+                                                "type": "Lakehouse",
+                                                "typeProperties": {
+                                                    "workspaceId": "e45d1098-f933-4cbe-b4fd-42338a0c446f",
+                                                    "artifactId": "1389c2d4-b8a2-4625-86a3-5e4f8cbb13e6",
+                                                    "rootFolder": "Files"
+                                                }
+                                            }
+                                        },
+                                        "type": "Binary",
+                                        "typeProperties": {
+                                            "location": {
+                                                "type": "LakehouseLocation",
+                                                "fileName": {
+                                                    "value": "@concat('yellow_tripdata_2025-', item(), '.parquet')",
+                                                    "type": "Expression"
+                                                },
+                                                "folderPath": "parquets"
+                                            }
+                                        }
+                                    }
+                                },
+                                "enableStaging": false
+                            }
+                        },
+                        {
+                            "name": "Into_Bronze",
+                            "type": "Copy",
+                            "dependsOn": [
+                                {
+                                    "activity": "Get_Parquet",
+                                    "dependencyConditions": [
+                                        "Completed"
+                                    ]
+                                }
+                            ],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "typeProperties": {
+                                "source": {
+                                    "type": "ParquetSource",
+                                    "storeSettings": {
+                                        "type": "AzureBlobStorageReadSettings",
+                                        "recursive": true,
+                                        "enablePartitionDiscovery": false
+                                    },
+                                    "formatSettings": {
+                                        "type": "ParquetReadSettings"
+                                    },
+                                    "datasetSettings": {
+                                        "annotations": [],
+                                        "linkedService": {
+                                            "name": "Bronze_Lakehouse",
+                                            "properties": {
+                                                "annotations": [],
+                                                "type": "Lakehouse",
+                                                "typeProperties": {
+                                                    "workspaceId": "e45d1098-f933-4cbe-b4fd-42338a0c446f",
+                                                    "artifactId": "1389c2d4-b8a2-4625-86a3-5e4f8cbb13e6",
+                                                    "rootFolder": "Files"
+                                                }
+                                            }
+                                        },
+                                        "type": "Parquet",
+                                        "typeProperties": {
+                                            "location": {
+                                                "type": "LakehouseLocation",
+                                                "fileName": {
+                                                    "value": "@concat('yellow_tripdata_2025-', item(), '.parquet')",
+                                                    "type": "Expression"
+                                                },
+                                                "folderPath": "parquets"
+                                            },
+                                            "compressionCodec": "snappy"
+                                        },
+                                        "schema": []
+                                    }
+                                },
+                                "sink": {
+                                    "type": "LakehouseTableSink",
+                                    "tableActionOption": "Append",
+                                    "applyVOrder": false,
+                                    "enableTimestampNtz": false,
+                                    "datasetSettings": {
+                                        "annotations": [],
+                                        "linkedService": {
+                                            "name": "Bronze_Lakehouse",
+                                            "properties": {
+                                                "annotations": [],
+                                                "type": "Lakehouse",
+                                                "typeProperties": {
+                                                    "workspaceId": "e45d1098-f933-4cbe-b4fd-42338a0c446f",
+                                                    "artifactId": "1389c2d4-b8a2-4625-86a3-5e4f8cbb13e6",
+                                                    "rootFolder": "Tables"
+                                                }
+                                            }
+                                        },
+                                        "type": "LakehouseTable",
+                                        "schema": [],
+                                        "typeProperties": {
+                                            "schema": "",
+                                            "table": "taxi_raw"
+                                        }
+                                    }
+                                },
+                                "enableStaging": false,
+                                "translator": {
+                                    "type": "TabularTranslator",
+                                    "typeConversion": true,
+                                    "typeConversionSettings": {
+                                        "allowDataTruncation": true,
+                                        "treatBooleanAsNumber": false
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "lastModifiedByObjectId": "46348c77-6e04-48a3-8af0-be84d719b818",
+        "lastPublishTime": "2026-11-25T22:42:58Z"
+    }
+}
